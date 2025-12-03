@@ -7,6 +7,10 @@ const {
 const cron = require("node-cron");
 const qrcode = require("qrcode-terminal");
 
+let startupMessageSent = false;
+const { DisconnectReason } = require("@whiskeysockets/baileys");
+
+
 // 🔧 Helper: format tanggal "YYYY-MM-DD"
 function getTodayKey() {
   const now = new Date();
@@ -35,26 +39,39 @@ async function startBot() {
 
   // ====== HANDLE CONNECTION & QR ======
   sock.ev.on("connection.update", (update) => {
-    const { connection, lastDisconnect, qr } = update;
+  const { connection, lastDisconnect, qr } = update;
 
-    if (qr) {
-      console.log("Scan QR ini dengan WhatsApp-mu:");
-      qrcode.generate(qr, { small: true });
-    }
+  if (qr) {
+    console.log("Scan QR ini dengan WhatsApp-mu:");
+    qrcode.generate(qr, { small: true });
+  }
 
-    if (connection === "open") {
-      console.log("✅ WhatsApp bot connected!");
+  if (connection === "open") {
+    console.log("✅ WhatsApp bot connected!");
 
-      // Kirim pesan awal sekali saat connect
+      // Kirim pesan awal HANYA sekali per proses
+    if (!startupMessageSent) {
+      startupMessageSent = true;
+
       sock.sendMessage(myJid, {
         text:
           "✅ Bot pengingat magang aktif.\n" +
           "- Reminder 1: 17:00 WIB (check-in sore)\n" +
           "- Reminder 2: 21:00 WIB (final check-out, kalau belum balas *SUDAH*).",
-    }).catch(console.error);
-    } else if (connection === "close") {
-      console.log("❌ Connection closed, reconnecting...");
-      startBot();
+      }).catch(console.error);
+    }
+  } else if (connection === "close") {
+      console.log("❌ Connection closed");
+
+      const shouldReconnect =
+        (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+
+      if (shouldReconnect) {
+        console.log("🔁 Reconnecting...");
+        startBot();
+      } else {
+        console.log("🚪 Logged out dari WhatsApp. Hapus folder auth_info dan scan QR lagi.");
+      }
     }
   });
 
@@ -102,7 +119,6 @@ async function startBot() {
   // ====== CRON: REMINDER PERTAMA JAM 17:00 WIB ======
   // Format cron: "m h * * *"
   // 0 17 * * *  => jam 17:00 setiap hari (pakai timezone server)
-  // ====== CRON: REMINDER PERTAMA JAM 17:00 WIB ======
   cron.schedule("0 17 * * *", async () => {
     const todayKey = getTodayKey();
     lastPrimaryReminderDate = todayKey;
