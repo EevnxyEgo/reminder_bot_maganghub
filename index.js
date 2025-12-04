@@ -61,11 +61,11 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   // ====== LISTENER UNTUK PESAN MASUK (CEK 'SUDAH') ======
+    // ====== LISTENER UNTUK PESAN MASUK (CEK 'SUDAH') ======
   sock.ev.on("messages.upsert", async (m) => {
     const msg = m.messages && m.messages[0];
     if (!msg) return;
 
-    const from = msg.key.remoteJid;
     const isFromMe = msg.key.fromMe;
 
     // Ambil text dari berbagai tipe message
@@ -78,19 +78,26 @@ async function startBot() {
 
     text = (text || "").trim();
 
-    // Kita hanya peduli kalau:
-    // - Chat dari kamu sendiri (myJid)
-    // - Pesan bukan dari bot (bukan fromMe)
-    if (from === myJid && !isFromMe && text.toUpperCase() === "SUDAH") {
+    // Debug biar jelas apa yang masuk
+    console.log("Message upsert:", { isFromMe, text });
+
+    // Logika sederhana:
+    // - pesan MASUK (isFromMe === false → dari HP-mu ke bot)
+    // - isi "SUDAH"
+    if (!isFromMe && text.toUpperCase() === "SUDAH") {
       const todayKey = getTodayKey();
       lastDoneDate = todayKey;
       console.log(`📌 Kamu balas "SUDAH" untuk tanggal ${todayKey}`);
 
-      await sock.sendMessage(myJid, {
-        text: "🔥 Mantap! Laporan magang hari ini sudah kamu tandai *SUDAH*.\nIstirahat yang cukup ya.",
-      }).catch(console.error);
+      await sock
+        .sendMessage(myJid, {
+          text:
+            "🔥 Mantap! Laporan magang hari ini sudah kamu tandai *SUDAH*.\nIstirahat yang cukup ya.",
+        })
+        .catch(console.error);
     }
   });
+
 
   // ====== CRON: REMINDER PERTAMA JAM 17:00 WIB ======
   // Format cron: "m h * * *"
