@@ -20,7 +20,7 @@ function getTodayKey() {
   return `${y}-${m}-${d}`;
 }
 
-// State sederhana di memory
+// State memory
 let lastDoneDate = null;          // Tanggal terakhir kamu balas "SUDAH"
 let lastPrimaryReminderDate = null; // Tanggal reminder jam 18:00 dikirim
 
@@ -32,7 +32,7 @@ async function startBot() {
     auth: state,
   });
 
-  // 📌 GANTI dengan nomor kamu sendiri, format internasional tanpa "+"
+  // 📌 GANTI dengan nomor whatsapp, format internasional tanpa "+"
   // contoh: 62xxxxxxxxxx
   const myNumber = process.env.MY_NUMBER;
   const myJid = `${myNumber}@s.whatsapp.net`;
@@ -78,7 +78,6 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds);
 
   // ====== LISTENER UNTUK PESAN MASUK (CEK 'SUDAH') ======
-    // ====== LISTENER UNTUK PESAN MASUK (CEK 'SUDAH') ======
   sock.ev.on("messages.upsert", async (m) => {
     const msg = m.messages && m.messages[0];
     if (!msg) return;
@@ -95,11 +94,9 @@ async function startBot() {
 
     text = (text || "").trim();
 
-    // Debug biar jelas apa yang masuk
     console.log("Message upsert:", { isFromMe, text });
 
     // Logika sederhana:
-    // - pesan MASUK (isFromMe === false → dari HP-mu ke bot)
     // - isi "SUDAH"
     if (!isFromMe && text.toUpperCase() === "SUDAH") {
       const todayKey = getTodayKey();
@@ -118,7 +115,6 @@ async function startBot() {
 
   // ====== CRON: REMINDER PERTAMA JAM 17:00 WIB ======
   // Format cron: "m h * * *"
-  // 0 17 * * *  => jam 17:00 setiap hari (pakai timezone server)
   cron.schedule("0 17 * * *", async () => {
     const todayKey = getTodayKey();
     lastPrimaryReminderDate = todayKey;
@@ -154,7 +150,6 @@ async function startBot() {
   });
 
 
-  // ====== CRON: REMINDER KEDUA JAM 22:00 WIB ======
   // ====== CRON: REMINDER KEDUA JAM 21:00 WIB ======
   cron.schedule("0 21 * * *", async () => {
     const todayKey = getTodayKey();
